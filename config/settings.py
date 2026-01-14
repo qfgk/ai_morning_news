@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     # 定时任务配置（crontab 表达式）
     SCHEDULE_CRONTAB: str = "0 8 * * *"  # 每天 8:00 (分 时 日 月 周)
 
+    # Webhook 推送配置
+    WEBHOOK_URL: Optional[str] = None  # 推送地址，多个用逗号、分号或空格分隔
+    WEBHOOK_ENABLED: bool = True  # 是否启用 Webhook 推送
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

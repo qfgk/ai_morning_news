@@ -134,6 +134,24 @@ def generate_daily_briefing_task():
                     result=f"生成 {result['total_count']} 篇文章"
                 )
 
+            # Webhook 推送
+            if settings.WEBHOOK_ENABLED:
+                try:
+                    from services.webhook_service import WebhookService
+                    webhook = WebhookService()
+
+                    # 构建推送数据
+                    briefing_dict = result["briefing"].to_dict() if hasattr(result.get("briefing"), "to_dict") else result.get("briefing", {})
+
+                    # 推送
+                    push_results = webhook.send_briefing(briefing_dict)
+
+                    # 记录推送结果
+                    success_count = sum(1 for v in push_results.values() if v)
+                    logger.info(f"Webhook 推送完成: {success_count}/{len(push_results)} 成功")
+                except Exception as e:
+                    logger.warning(f"Webhook 推送失败: {e}")
+
             return {
                 "status": "success",
                 "date": date,
