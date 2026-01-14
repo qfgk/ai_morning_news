@@ -23,7 +23,10 @@ if __name__ == '__main__':
     print(f"   环境: {settings.ENVIRONMENT}")
     print(f"   调试模式: {settings.DEBUG}")
     print(f"\n🌐 服务地址:")
-    print(f"   http://{settings.FLASK_HOST}:{settings.FLASK_PORT}")
+    print(f"   容器内部: http://0.0.0.0:5000 (固定)")
+    # 外部访问端口从环境变量读取（用于 Docker 端口映射）
+    external_port = os.getenv('FLASK_PORT', '5000')
+    print(f"   外部访问: http://localhost:{external_port}")
     print(f"\n📌 API端点:")
     print(f"   GET  /health                    - 健康检查")
     print(f"   GET  /api/v1/briefing/latest    - 获取最新早报")
@@ -34,8 +37,9 @@ if __name__ == '__main__':
     print("⚡ 启动服务...")
     print("=" * 60 + "\n")
 
+    # 容器内固定使用 5000 端口，外部端口通过 Docker 端口映射配置
     app.run(
-        host=settings.FLASK_HOST,
-        port=settings.FLASK_PORT,
+        host="0.0.0.0",
+        port=5000,
         debug=settings.DEBUG
     )
