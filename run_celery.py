@@ -16,8 +16,6 @@ app = Celery('morning_news')
 app.config_from_object(CeleryConfig)
 
 if __name__ == '__main__':
-    import celery.bin.worker
-
     print("=" * 60)
     print("🔄 Celery Worker")
     print("=" * 60)
@@ -27,9 +25,5 @@ if __name__ == '__main__':
     print(f"\n⚡ 启动 Worker...")
     print("=" * 60 + "\n")
 
-    # 启动worker
-    worker = celery.bin.worker.worker(app=app)
-    worker.run(
-        loglevel='info',
-        traceback=True,
-    )
+    # 启动worker（使用 app.worker_main 方法）
+    app.worker_main(['worker', '--loglevel=info', '--traceback=True'])
