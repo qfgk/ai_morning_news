@@ -4,7 +4,6 @@ services:
   # MySQL 数据库（使用时需要指定 --profile mysql）
   mysql:
     image: mysql:8.0
-    container_name: ainews_db
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-morning_news}
@@ -28,7 +27,6 @@ services:
   # Redis 缓存（使用时需要指定 --profile redis）
   redis:
     image: redis:7.0-alpine
-    container_name: ainews_redis
     command: redis-server --appendonly yes --requirepass ${REDIS_CONTAINER_PASSWORD:-}
     volumes:
       - ainews_redis_data:/data
