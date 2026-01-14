@@ -4,18 +4,18 @@ services:
   # MySQL 数据库（使用时需要指定 --profile mysql）
   mysql:
     image: mysql:8.0
-    container_name: morning_news_db
+    container_name: ainews_db
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-morning_news}
       MYSQL_USER: ${MYSQL_USER:-app_user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-app_password}
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ainews_mysql_data:/var/lib/mysql
     ports:
       - "${MYSQL_PORT:-3306}:3306"
     networks:
-      - morning_news_network
+      - ainews_network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -28,14 +28,14 @@ services:
   # Redis 缓存（使用时需要指定 --profile redis）
   redis:
     image: redis:7.0-alpine
-    container_name: morning_news_redis
+    container_name: ainews_redis
     command: redis-server --appendonly yes --requirepass ${REDIS_CONTAINER_PASSWORD:-}
     volumes:
-      - redis_data:/data
+      - ainews_redis_data:/data
     ports:
       - "${REDIS_PORT:-6379}:6379"
     networks:
-      - morning_news_network
+      - ainews_network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -48,7 +48,7 @@ services:
   # Web API
   web:
     build: .
-    container_name: morning_news_web
+    container_name: ainews_web
     command: python run_api.py
     volumes:
       - .:/app
@@ -58,13 +58,13 @@ services:
     env_file:
       - .env
     networks:
-      - morning_news_network
+      - ainews_network
     restart: unless-stopped
 
   # Celery Worker
   celery_worker:
     build: .
-    container_name: morning_news_celery_worker
+    container_name: ainews_celery_worker
     command: python run_celery.py
     volumes:
       - .:/app
@@ -72,13 +72,13 @@ services:
     env_file:
       - .env
     networks:
-      - morning_news_network
+      - ainews_network
     restart: unless-stopped
 
   # Celery Beat (定时任务调度器)
   celery_beat:
     build: .
-    container_name: morning_news_celery_beat
+    container_name: ainews_celery_beat
     command: python run_beat.py
     volumes:
       - .:/app
@@ -86,15 +86,15 @@ services:
     env_file:
       - .env
     networks:
-      - morning_news_network
+      - ainews_network
     restart: unless-stopped
 
 volumes:
-  mysql_data:
+  ainews_mysql_data:
     driver: local
-  redis_data:
+  ainews_redis_data:
     driver: local
 
 networks:
-  morning_news_network:
+  ainews_network:
     driver: bridge
