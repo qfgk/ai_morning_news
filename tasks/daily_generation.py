@@ -17,6 +17,67 @@ from config.settings import get_settings, get_ai_settings
 logger = logging.getLogger(__name__)
 
 
+async def _generate_briefing_async(date: str, settings, ai_service, news_repo):
+    """异步生成早报的辅助函数"""
+    cache_repo = None
+    redis_client = None
+
+    try:
+        # 连接 Redis
+        redis_client = RedisClient(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            password=settings.REDIS_PASSWORD,
+            db=settings.REDIS_DB
+        )
+        await redis_client.connect()
+        if await redis_client.ping():
+            cache_repo = CacheRepository(redis_client)
+            logger.info("Redis连接成功")
+
+        # 获取任务锁
+        if cache_repo:
+            lock_acquired = await cache_repo.acquire_task_lock("daily_briefing", date)
+            if not lock_acquired:
+                logger.warning(f"任务已在执行中，跳过: {date}")
+                return {"status": "skipped", "reason": "lock not acquired"}
+
+        try:
+            # 生成早报
+            news_service = NewsService(
+                ai_service=ai_service,
+                news_repo=news_repo,
+                cache_repo=cache_repo
+            )
+
+            briefing = await news_service.generate_daily_briefing(
+                date=date,
+                sources=["aibase"],
+                limit=settings.CRAWLER_MAX_ARTICLES,
+                use_cache=True,
+                save_to_db=True
+            )
+
+            logger.info(f"早报生成成功: {briefing.title}, 共 {briefing.total_count} 篇文章")
+
+            return {
+                "status": "success",
+                "date": date,
+                "total_count": briefing.total_count,
+                "briefing": briefing
+            }
+
+        finally:
+            # 释放任务锁
+            if cache_repo:
+                await cache_repo.release_task_lock("daily_briefing", date)
+
+    finally:
+        # 关闭Redis连接
+        if redis_client:
+            await redis_client.disconnect()
+
+
 @celery_app.task(name='tasks.daily_generation.generate_daily_briefing_task')
 def generate_daily_briefing_task():
     """每日早报生成任务"""
@@ -46,6 +107,7 @@ def generate_daily_briefing_task():
             max_concurrent=settings.AI_SUMMARY_CONCURRENT
         )
 
+        # 初始化数据库
         news_repo = None
         try:
             news_repo = NewsRepository()
@@ -53,54 +115,15 @@ def generate_daily_briefing_task():
         except Exception as e:
             logger.warning(f"数据库连接失败: {e}")
 
-        cache_repo = None
-        redis_client = None
-        try:
-            redis_client = RedisClient(
-                host=settings.REDIS_HOST,
-                port=settings.REDIS_PORT,
-                password=settings.REDIS_PASSWORD,
-                db=settings.REDIS_DB
-            )
-            # 在Celery任务中需要使用asyncio.run
-            asyncio.run(redis_client.connect())
-            if asyncio.run(redis_client.ping()):
-                cache_repo = CacheRepository(redis_client)
-                logger.info("Redis连接成功")
-        except Exception as e:
-            logger.warning(f"Redis连接失败: {e}")
+        # 运行异步任务（只创建一次事件循环）
+        result = asyncio.run(_generate_briefing_async(date, settings, ai_service, news_repo))
 
-        # 获取任务锁，防止重复执行
-        if cache_repo:
-            lock_acquired = asyncio.run(cache_repo.acquire_task_lock("daily_briefing", date))
-            if not lock_acquired:
-                logger.warning(f"任务已在执行中，跳过: {date}")
-                return {"status": "skipped", "reason": "lock not acquired"}
+        # 计算耗时
+        end_time = datetime.now()
+        duration = int((end_time - start_time).total_seconds())
 
-        try:
-            # 生成早报
-            news_service = NewsService(
-                ai_service=ai_service,
-                news_repo=news_repo,
-                cache_repo=cache_repo
-            )
-
-            briefing = asyncio.run(
-                news_service.generate_daily_briefing(
-                    date=date,
-                    sources=["aibase"],
-                    limit=settings.CRAWLER_MAX_ARTICLES,
-                    use_cache=True,
-                    save_to_db=True
-                )
-            )
-
-            end_time = datetime.now()
-            duration = int((end_time - start_time).total_seconds())
-
-            logger.info(f"早报生成成功: {briefing.title}, 共 {briefing.total_count} 篇文章")
-
-            # 记录任务日志
+        # 记录任务日志
+        if result.get("status") == "success":
             if news_repo:
                 news_repo.log_task(
                     task_name="daily_briefing",
@@ -108,24 +131,17 @@ def generate_daily_briefing_task():
                     start_time=start_time,
                     end_time=end_time,
                     duration=duration,
-                    result=f"生成 {briefing.total_count} 篇文章"
+                    result=f"生成 {result['total_count']} 篇文章"
                 )
 
             return {
                 "status": "success",
                 "date": date,
-                "total_count": briefing.total_count,
+                "total_count": result["total_count"],
                 "duration": duration
             }
-
-        finally:
-            # 释放任务锁
-            if cache_repo:
-                asyncio.run(cache_repo.release_task_lock("daily_briefing", date))
-
-            # 关闭Redis连接
-            if redis_client:
-                asyncio.run(redis_client.disconnect())
+        else:
+            return result
 
     except Exception as e:
         end_time = datetime.now()
