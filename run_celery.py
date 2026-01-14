@@ -10,6 +10,9 @@ load_dotenv()
 
 from tasks.celery_app import celery_app
 
+# 导入任务模块以注册任务（重要！）
+import tasks.daily_generation
+
 if __name__ == '__main__':
     print("=" * 60)
     print("🔄 Celery Worker")
