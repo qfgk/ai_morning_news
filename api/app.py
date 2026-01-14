@@ -1,6 +1,7 @@
 """
 Flask 应用工厂
 """
+import logging
 from flask import Flask
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -58,6 +59,14 @@ def create_app(config_name: str = None) -> Flask:
     app.config['ENVIRONMENT'] = settings.ENVIRONMENT
     # 配置 JSON 输出中文而非 Unicode 转义
     app.json.ensure_ascii = False
+
+    # 配置日志：生产环境关闭 SQL 日志
+    if not settings.DEBUG:
+        # 生产环境：关闭 SQLAlchemy 的 SQL 日志
+        logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+        logging.getLogger('sqlalchemy.pool').setLevel(logging.WARNING)
+        logging.getLogger('sqlalchemy.dialects').setLevel(logging.WARNING)
+        logging.getLogger('sqlalchemy.orm').setLevel(logging.WARNING)
 
     # 创建并初始化速率限制器
     limiter = create_limiter(settings)
