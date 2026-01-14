@@ -36,7 +36,7 @@ def require_api_key(f):
     return decorated_function
 
 
-def check_api_key optional(f):
+def check_api_key_optional(f):
     """可选的API密钥验证（部分接口允许无密钥访问但限流）"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
