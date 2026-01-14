@@ -72,7 +72,9 @@ dmypy.json
 
 # Celery
 celerybeat-schedule
+celerybeat-schedule.*
 celerybeat.pid
+=1.0.0
 
 # Docker
 *.pid
