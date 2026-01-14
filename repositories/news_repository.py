@@ -84,6 +84,10 @@ class NewsRepository:
         # 先保存所有文章
         article_ids = self.save_articles(briefing.articles)
 
+        # 生成完整格式化文本
+        if not briefing.full_text:
+            briefing.generate_full_text()
+
         with session_scope() as session:
             # 检查是否已存在
             existing = session.query(DailyBriefingDB).filter_by(date=briefing.date).first()
@@ -93,6 +97,7 @@ class NewsRepository:
                 existing.article_ids = article_ids
                 existing.total_count = briefing.total_count
                 existing.ai_summary = briefing.ai_summary
+                existing.full_text = briefing.full_text
                 briefing_id = existing.id
             else:
                 # 新增
@@ -101,7 +106,8 @@ class NewsRepository:
                     title=briefing.title,
                     article_ids=article_ids,
                     total_count=briefing.total_count,
-                    ai_summary=briefing.ai_summary
+                    ai_summary=briefing.ai_summary,
+                    full_text=briefing.full_text
                 )
                 session.add(briefing_db)
                 session.flush()

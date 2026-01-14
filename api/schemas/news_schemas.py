@@ -40,6 +40,7 @@ class DailyBriefingSchema(BaseModel):
     articles: List[ArticleSchema]
     total_count: int
     ai_summary: Optional[str] = None
+    full_text: Optional[str] = Field(None, description="完整的格式化早报文本（可直接发送）")
     created_at: Optional[str] = None
 
     class Config:
@@ -49,7 +50,8 @@ class DailyBriefingSchema(BaseModel):
                 "title": "早报 - 2025-01-13",
                 "articles": [],
                 "total_count": 0,
-                "ai_summary": "今日要闻..."
+                "ai_summary": "今日要闻...",
+                "full_text": "# 早报标题\n\n## 今日摘要\n摘要内容...\n\n## 热点文章\n1. 文章标题\n   摘要..."
             }
         }
 

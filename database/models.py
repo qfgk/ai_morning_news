@@ -74,6 +74,7 @@ class DailyBriefingDB(Base):
     article_ids = Column(JSON, comment="文章ID列表")
     total_count = Column(Integer, default=0, comment="文章总数")
     ai_summary = Column(Text, comment="AI生成的整体总结")
+    full_text = Column(Text, comment="完整的格式化早报文本（可直接发送）")
     created_at = Column(DateTime, default=datetime.now, comment="创建时间")
 
     def to_dict(self) -> dict:
@@ -85,6 +86,7 @@ class DailyBriefingDB(Base):
             "article_ids": self.article_ids,
             "total_count": self.total_count,
             "ai_summary": self.ai_summary,
+            "full_text": self.full_text,  # 完整格式化文本
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
