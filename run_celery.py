@@ -26,4 +26,4 @@ if __name__ == '__main__':
     print("=" * 60 + "\n")
 
     # 启动worker（使用 app.worker_main 方法）
-    app.worker_main(['worker', '--loglevel=info', '--traceback=True'])
+    app.worker_main(['worker', '--loglevel=info'])
