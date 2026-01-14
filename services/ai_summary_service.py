@@ -1,21 +1,44 @@
 """
 AI 总结服务
-封装智谱AI API调用
+支持 OpenAI 格式的大模型 API
 """
 
 from typing import Optional, List
 import asyncio
-from zhipuai import ZhipuAI
+from openai import OpenAI
 from core.models import Article, ArticleStatus
 from core.constants import AI_SUMMARY_SYSTEM_PROMPT
 
 
 class AISummaryService:
-    """AI 总结服务"""
+    """AI 总结服务 - 支持 OpenAI 格式的大模型"""
 
-    def __init__(self, api_key: str, base_url: str = "https://open.bigmodel.cn/api/paas/v4",
-                 model: str = "glm-4.7", max_concurrent: int = 10):
-        self.client = ZhipuAI(api_key=api_key, base_url=base_url)
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = "https://api.openai.com/v1",
+        model: str = "gpt-3.5-turbo",
+        max_concurrent: int = 10
+    ):
+        """
+        初始化 AI 总结服务
+
+        Args:
+            api_key: API 密钥
+            base_url: API 基础 URL（支持任何兼容 OpenAI 格式的 API）
+            model: 模型名称
+            max_concurrent: 最大并发数
+
+        支持的提供商示例：
+            - OpenAI: base_url="https://api.openai.com/v1", model="gpt-3.5-turbo"
+            - 智谱AI: base_url="https://open.bigmodel.cn/api/paas/v4", model="glm-4.7"
+            - DeepSeek: base_url="https://api.deepseek.com/v1", model="deepseek-chat"
+            - 通义千问: base_url="https://dashscope.aliyuncs.com/compatible-mode/v1", model="qwen-turbo"
+        """
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=base_url
+        )
         self.model = model
         self.system_prompt = AI_SUMMARY_SYSTEM_PROMPT
         self.max_concurrent = max_concurrent
@@ -89,9 +112,9 @@ class AISummaryService:
         """同步生成每日早报整体总结"""
         prompt = f"""
                 请基于以下文章列表，生成一份简短的早报汇总（3-5句话）：
-                
+
                 {titles_and_summaries}
-                
+
                 要求：
                 1. 总结今日最重要的3-5条资讯
                 2. 每条一句话概括

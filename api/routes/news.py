@@ -14,7 +14,7 @@ from services.ai_summary_service import AISummaryService
 from repositories.news_repository import NewsRepository
 from cache.cache_repository import CacheRepository
 from cache.redis_client import RedisClient
-from config.settings import get_settings
+from config.settings import get_settings, get_ai_settings
 from utils.validation import validate_date_format
 
 logger = logging.getLogger(__name__)
@@ -26,10 +26,17 @@ def get_news_service():
     """获取新闻服务实例"""
     settings = get_settings()
 
+    # 获取 AI 配置
+    try:
+        api_key, base_url, model = get_ai_settings()
+    except ValueError as e:
+        logger.error(f"AI 配置错误: {e}")
+        raise APIError(f"AI 配置错误: {str(e)}", 500)
+
     ai_service = AISummaryService(
-        api_key=settings.ZHIPUAI_API_KEY,
-        base_url=settings.ZHIPUAI_BASE_URL,
-        model=settings.ZHIPUAI_MODEL,
+        api_key=api_key,
+        base_url=base_url,
+        model=model,
         max_concurrent=settings.AI_SUMMARY_CONCURRENT
     )
 

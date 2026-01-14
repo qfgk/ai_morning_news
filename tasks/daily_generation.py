@@ -12,7 +12,7 @@ from services.ai_summary_service import AISummaryService
 from repositories.news_repository import NewsRepository
 from cache.cache_repository import CacheRepository
 from cache.redis_client import RedisClient
-from config.settings import get_settings
+from config.settings import get_settings, get_ai_settings
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +27,22 @@ def generate_daily_briefing_task():
     settings = get_settings()
 
     try:
-        # 初始化服务
+        # 初始化 AI 服务
+        try:
+            api_key, base_url, model = get_ai_settings()
+        except ValueError as e:
+            logger.error(f"AI 配置错误: {e}")
+            return {
+                "status": "failed",
+                "date": date,
+                "error": str(e),
+                "duration": 0
+            }
+
         ai_service = AISummaryService(
-            api_key=settings.ZHIPUAI_API_KEY,
-            base_url=settings.ZHIPUAI_BASE_URL,
-            model=settings.ZHIPUAI_MODEL,
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
             max_concurrent=settings.AI_SUMMARY_CONCURRENT
         )
 

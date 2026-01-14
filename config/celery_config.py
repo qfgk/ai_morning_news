@@ -2,6 +2,7 @@
 Celery 配置
 """
 from celery import Celery
+from celery.schedules import crontab
 from config.settings import get_settings
 
 settings = get_settings()
@@ -37,16 +38,39 @@ class CeleryConfig:
         'tasks.daily_generation.generate_daily_briefing_task': {'queue': 'briefing'},
     }
 
-    # 定时任务配置
-    beat_schedule = {
+
+def get_beat_schedule():
+    """根据配置生成定时任务调度表"""
+    settings = get_settings()
+
+    if not settings.SCHEDULE_CRONTAB:
+        return {}  # 未配置定时任务
+
+    # 解析 crontab 表达式: "分 时 日 月 周"
+    # 例如: "0 8 * * *" = 每天 8:00
+    parts = settings.SCHEDULE_CRONTAB.strip().split()
+
+    if len(parts) != 5:
+        print(f"警告: SCHEDULE_CRONTAB 格式错误: {settings.SCHEDULE_CRONTAB}")
+        print("正确格式: \"分 时 日 月 周\"，例如: \"0 8 * * *\"")
+        return {}
+
+    minute, hour, day, month, day_of_week = parts
+
+    return {
         'generate-daily-briefing': {
             'task': 'tasks.daily_generation.generate_daily_briefing_task',
-            'schedule': 60 * 60 * 24,  # 每天（通过crontab更精确）
-            # 'schedule': crontab(hour=8, minute=0),  # 每天8:00执行
+            'schedule': crontab(
+                minute=minute,
+                hour=hour,
+                day_of_month=day,
+                month_of_year=month,
+                day_of_week=day_of_week
+            ),
             'options': {
                 'expires': 3600  # 任务1小时后过期
             }
-        },
+        }
     }
 
 
@@ -60,5 +84,8 @@ def create_celery(app=None):
 
     # 加载配置
     celery.config_from_object(CeleryConfig)
+
+    # 设置定时任务调度
+    celery.conf.beat_schedule = get_beat_schedule()
 
     return celery

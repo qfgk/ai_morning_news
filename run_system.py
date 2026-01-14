@@ -16,7 +16,7 @@ from services.ai_summary_service import AISummaryService
 from repositories.news_repository import NewsRepository
 from cache.cache_repository import CacheRepository
 from cache.redis_client import RedisClient
-from config.settings import get_settings
+from config.settings import get_settings, get_ai_settings
 
 
 async def main():
@@ -27,9 +27,15 @@ async def main():
     print(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION}")
     print("=" * 60)
 
-    # 检查API密钥
-    if not settings.ZHIPUAI_API_KEY or settings.ZHIPUAI_API_KEY == "your_api_key_here":
-        print("❌ 错误: 请在 .env 文件中设置 ZHIPUAI_API_KEY")
+    # 获取 AI 配置
+    try:
+        api_key, base_url, model = get_ai_settings()
+        print(f"\n🤖 AI 配置:")
+        print(f"   API: {base_url}")
+        print(f"   模型: {model}")
+    except ValueError as e:
+        print(f"❌ 错误: {e}")
+        print("   请在 .env 文件中设置 AI_API_KEY")
         print("   可以复制 .env.example 为 .env 并填入你的API密钥")
         return
 
@@ -43,11 +49,11 @@ async def main():
     print(f"   数据库: {'✅' if use_db else '❌'}")
     print(f"   Redis: {'✅' if use_redis else '❌'}")
 
-    # 初始化组件
+    # 初始化 AI 服务
     ai_service = AISummaryService(
-        api_key=settings.ZHIPUAI_API_KEY,
-        base_url=settings.ZHIPUAI_BASE_URL,
-        model=settings.ZHIPUAI_MODEL,
+        api_key=api_key,
+        base_url=base_url,
+        model=model,
         max_concurrent=settings.AI_SUMMARY_CONCURRENT
     )
 
