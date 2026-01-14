@@ -964,3 +964,5 @@ Copyright (c) 2025 qfgk
 
 - GitHub: [qfgk](https://github.com/qfgk)
 - 项目地址: [https://github.com/qfgk/ai_morning_news](https://github.com/qfgk/ai_morning_news)
+- 关注公众号进群交流
+![gzh.png](docs/gzh.png)
