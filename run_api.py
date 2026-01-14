@@ -22,8 +22,6 @@ if __name__ == '__main__':
     print(f"\n📋 服务配置:")
     print(f"   环境: {settings.ENVIRONMENT}")
     print(f"   调试模式: {settings.DEBUG}")
-    print(f"\n🌐 服务地址:")
-    print(f"   http://{settings.FLASK_HOST}:{settings.FLASK_PORT}")
     print(f"\n📌 API端点:")
     print(f"   GET  /health                    - 健康检查")
     print(f"   GET  /api/v1/briefing/latest    - 获取最新早报")

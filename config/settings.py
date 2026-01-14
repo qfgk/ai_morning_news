@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     # AI 总结并发数
     AI_SUMMARY_CONCURRENT: int = 10  # 同时请求AI的数量
 
+    # 速率限制配置
+    RATE_LIMIT_ENABLED: bool = True  # 是否启用速率限制
+    RATE_LIMIT_PER_MINUTE: int = 10  # 每分钟最多请求次数
+
     # 定时任务配置（crontab 表达式）
     SCHEDULE_CRONTAB: str = "0 8 * * *"  # 每天 8:00 (分 时 日 月 周)
 

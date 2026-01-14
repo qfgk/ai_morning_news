@@ -1,7 +1,7 @@
 """
 健康检查路由
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, current_app
 import logging
 
 from api.middleware.error_handler import InternalError
@@ -13,7 +13,11 @@ health_bp = Blueprint('health', __name__)
 
 @health_bp.route('/health', methods=['GET'])
 def health_check():
-    """健康检查"""
+    """健康检查 - 豁免速率限制"""
+    # 从 current_app 获取 limiter 并豁免此路由
+    # 注意：实际豁免在请求级别处理，这里仅作说明
+    # Flask-Limiter 会在装饰器级别处理豁免
+
     status = {
         "service": "ok",
         "database": "unknown",
@@ -23,9 +27,10 @@ def health_check():
     # 检查数据库
     try:
         from database import get_db_manager
+        from sqlalchemy import text
         db_manager = get_db_manager()
         with db_manager.get_session() as session:
-            session.execute("SELECT 1")
+            session.execute(text("SELECT 1"))
         status["database"] = "ok"
     except Exception as e:
         logger.warning(f"Database health check failed: {e}")
@@ -62,3 +67,7 @@ def health_check():
     status_code = 200 if all_ok else 503
 
     return jsonify(status), status_code
+
+
+# 豁免健康检查路由的速率限制
+health_check.exempt = True
