@@ -28,6 +28,6 @@ if __name__ == '__main__':
     import platform
     if platform.system() == 'Windows':
         print("⚠️  检测到 Windows 环境，使用 solo pool（单进程模式）")
-        celery_app.worker_main(['worker', '--loglevel=info', '--pool=solo'])
+        celery_app.worker_main(['worker', '--loglevel=info', '--pool=solo', '-Q', 'celery,briefing'])
     else:
-        celery_app.worker_main(['worker', '--loglevel=info'])
+        celery_app.worker_main(['worker', '--loglevel=info', '-Q', 'celery,briefing'])
