@@ -21,6 +21,46 @@ logger = logging.getLogger(__name__)
 
 news_bp = Blueprint('news', __name__)
 
+# 全局缓存服务实例（线程本地存储）
+import threading
+_thread_local = threading.local()
+
+
+def _get_cache_repo():
+    """获取或创建当前线程的缓存仓库"""
+    # 检查当前线程是否已有缓存仓库
+    if hasattr(_thread_local, 'cache_repo') and _thread_local.cache_repo is not None:
+        return _thread_local.cache_repo
+
+    settings = get_settings()
+    try:
+        redis_client = RedisClient(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            password=settings.REDIS_PASSWORD,
+            db=settings.REDIS_DB
+        )
+        # 为当前线程创建事件循环
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                raise RuntimeError("Loop is closed")
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        loop.run_until_complete(redis_client.connect())
+        if loop.run_until_complete(redis_client.ping()):
+            cache_repo = CacheRepository(redis_client)
+            _thread_local.cache_repo = cache_repo
+            _thread_local.redis_client = redis_client
+            logger.info("Redis cache initialized successfully")
+    except Exception as e:
+        logger.warning(f"Failed to initialize cache repository: {e}")
+        _thread_local.cache_repo = None
+
+    return _thread_local.cache_repo
+
 
 def get_news_service():
     """获取新闻服务实例"""
@@ -46,26 +86,8 @@ def get_news_service():
     except Exception as e:
         logger.warning(f"Failed to initialize news repository: {e}")
 
-    cache_repo = None
-    try:
-        redis_client = RedisClient(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            password=settings.REDIS_PASSWORD,
-            db=settings.REDIS_DB
-        )
-        # 创建新的事件循环
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(redis_client.connect())
-            if loop.run_until_complete(redis_client.ping()):
-                cache_repo = CacheRepository(redis_client)
-        finally:
-            # 保持连接不关闭，让cache_repo管理
-            pass
-    except Exception as e:
-        logger.warning(f"Failed to initialize cache repository: {e}")
+    # 获取当前线程的缓存仓库
+    cache_repo = _get_cache_repo()
 
     return NewsService(
         ai_service=ai_service,
@@ -81,16 +103,24 @@ def get_latest_briefing():
     try:
         news_service = get_news_service()
 
-        # 在新的事件循环中运行异步代码
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # 获取或创建当前线程的事件循环
         try:
-            briefing = loop.run_until_complete(news_service.get_latest_briefing())
-        finally:
-            loop.close()
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        briefing = loop.run_until_complete(news_service.get_latest_briefing())
 
         if not briefing:
-            raise NotFoundError("暂无早报数据")
+            return jsonify({
+                "code": 200,
+                "message": "暂无本日早报数据",
+                "data": None
+            })
 
         return jsonify({
             "code": 200,
@@ -118,16 +148,24 @@ def get_briefing_by_date(date: str):
 
         news_service = get_news_service()
 
-        # 在新的事件循环中运行异步代码
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # 获取或创建当前线程的事件循环
         try:
-            briefing = loop.run_until_complete(news_service.get_briefing_by_date(date))
-        finally:
-            loop.close()
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        briefing = loop.run_until_complete(news_service.get_briefing_by_date(date))
 
         if not briefing:
-            raise NotFoundError(f"未找到 {date} 的早报")
+            return jsonify({
+                "code": 200,
+                "message": f"暂无 {date} 的早报数据",
+                "data": None
+            })
 
         return jsonify({
             "code": 200,
@@ -163,21 +201,25 @@ def generate_briefing():
 
         news_service = get_news_service()
 
-        # 在新的事件循环中运行异步代码
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # 获取或创建当前线程的事件循环
         try:
-            briefing = loop.run_until_complete(
-                news_service.generate_daily_briefing(
-                    date=date,
-                    sources=sources,
-                    limit=limit,
-                    use_cache=use_cache,
-                    save_to_db=save_to_db
-                )
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        briefing = loop.run_until_complete(
+            news_service.generate_daily_briefing(
+                date=date,
+                sources=sources,
+                limit=limit,
+                use_cache=use_cache,
+                save_to_db=save_to_db
             )
-        finally:
-            loop.close()
+        )
 
         return jsonify({
             "code": 200,
