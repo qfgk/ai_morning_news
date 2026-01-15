@@ -54,16 +54,7 @@ def get_news_service():
             password=settings.REDIS_PASSWORD,
             db=settings.REDIS_DB
         )
-        # 创建新的事件循环
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(redis_client.connect())
-            if loop.run_until_complete(redis_client.ping()):
-                cache_repo = CacheRepository(redis_client)
-        finally:
-            # 保持连接不关闭，让cache_repo管理
-            pass
+        cache_repo = CacheRepository(redis_client)
     except Exception as e:
         logger.warning(f"Failed to initialize cache repository: {e}")
 
@@ -81,13 +72,8 @@ def get_latest_briefing():
     try:
         news_service = get_news_service()
 
-        # 在新的事件循环中运行异步代码
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            briefing = loop.run_until_complete(news_service.get_latest_briefing())
-        finally:
-            loop.close()
+        # 使用 asyncio.run() 运行异步代码
+        briefing = asyncio.run(news_service.get_latest_briefing())
 
         if not briefing:
             raise NotFoundError("暂无早报数据")
@@ -118,13 +104,8 @@ def get_briefing_by_date(date: str):
 
         news_service = get_news_service()
 
-        # 在新的事件循环中运行异步代码
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            briefing = loop.run_until_complete(news_service.get_briefing_by_date(date))
-        finally:
-            loop.close()
+        # 使用 asyncio.run() 运行异步代码
+        briefing = asyncio.run(news_service.get_briefing_by_date(date))
 
         if not briefing:
             raise NotFoundError(f"未找到 {date} 的早报")
@@ -163,21 +144,16 @@ def generate_briefing():
 
         news_service = get_news_service()
 
-        # 在新的事件循环中运行异步代码
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            briefing = loop.run_until_complete(
-                news_service.generate_daily_briefing(
-                    date=date,
-                    sources=sources,
-                    limit=limit,
-                    use_cache=use_cache,
-                    save_to_db=save_to_db
-                )
+        # 使用 asyncio.run() 运行异步代码
+        briefing = asyncio.run(
+            news_service.generate_daily_briefing(
+                date=date,
+                sources=sources,
+                limit=limit,
+                use_cache=use_cache,
+                save_to_db=save_to_db
             )
-        finally:
-            loop.close()
+        )
 
         return jsonify({
             "code": 200,
