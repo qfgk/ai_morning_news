@@ -129,6 +129,7 @@ class NewsService:
                     articles=articles,
                     total_count=cached['total_count'],
                     ai_summary=cached.get('ai_summary'),
+                    full_text=cached.get('full_text'),  # 包含完整文本
                     created_at=datetime.fromisoformat(cached['created_at']) if cached.get('created_at') else None
                 )
 
@@ -144,6 +145,7 @@ class NewsService:
                     articles=articles,
                     total_count=briefing_data['total_count'],
                     ai_summary=briefing_data.get('ai_summary'),
+                    full_text=briefing_data.get('full_text'),  # 包含完整文本
                     created_at=datetime.fromisoformat(briefing_data['created_at']) if briefing_data.get('created_at') else None
                 )
 
@@ -163,6 +165,7 @@ class NewsService:
                     articles=articles,
                     total_count=cached['total_count'],
                     ai_summary=cached.get('ai_summary'),
+                    full_text=cached.get('full_text'),  # 包含完整文本
                     created_at=datetime.fromisoformat(cached['created_at']) if cached.get('created_at') else None
                 )
 
@@ -178,6 +181,7 @@ class NewsService:
                     articles=articles,
                     total_count=briefing_data['total_count'],
                     ai_summary=briefing_data.get('ai_summary'),
+                    full_text=briefing_data.get('full_text'),  # 包含完整文本
                     created_at=datetime.fromisoformat(briefing_data['created_at']) if briefing_data.get('created_at') else None
                 )
 

@@ -68,6 +68,7 @@ def get_beat_schedule():
                 day_of_week=day_of_week
             ),
             'options': {
+                'queue': 'briefing',  # 明确指定队列
                 'expires': 3600  # 任务1小时后过期
             }
         }

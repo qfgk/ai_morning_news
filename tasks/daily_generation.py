@@ -35,6 +35,18 @@ async def _generate_briefing_async(date: str, settings, ai_service, news_repo):
             cache_repo = CacheRepository(redis_client)
             logger.info("Redis连接成功")
 
+        # 检查数据库中是否已存在今天的早报
+        if news_repo:
+            existing_briefing = news_repo.get_daily_briefing(date)
+            if existing_briefing:
+                logger.info(f"数据库中已存在 {date} 的早报，跳过生成")
+                return {
+                    "status": "skipped",
+                    "reason": "already_exists",
+                    "date": date,
+                    "message": f"早报已存在: {existing_briefing.get('title')}"
+                }
+
         # 获取任务锁
         if cache_repo:
             lock_acquired = await cache_repo.acquire_task_lock("daily_briefing", date)
@@ -43,7 +55,7 @@ async def _generate_briefing_async(date: str, settings, ai_service, news_repo):
                 return {"status": "skipped", "reason": "lock not acquired"}
 
         try:
-            # 生成早报
+            # 生成早报（定时任务不使用缓存，强制爬取最新数据）
             news_service = NewsService(
                 ai_service=ai_service,
                 news_repo=news_repo,
@@ -54,7 +66,7 @@ async def _generate_briefing_async(date: str, settings, ai_service, news_repo):
                 date=date,
                 sources=["aibase"],
                 limit=settings.CRAWLER_MAX_ARTICLES,
-                use_cache=True,
+                use_cache=False,  # 定时任务不使用缓存，强制爬取
                 save_to_db=True
             )
 
@@ -158,6 +170,30 @@ def generate_daily_briefing_task():
                 "total_count": result["total_count"],
                 "duration": duration
             }
+        elif result.get("status") == "skipped":
+            # 处理跳过的情况
+            reason = result.get("reason", "unknown")
+            message = result.get("message", "")
+
+            if reason == "already_exists":
+                logger.info(f"早报已存在，跳过生成: {message}")
+                # 记录跳过日志
+                try:
+                    if news_repo:
+                        news_repo.log_task(
+                            task_name="daily_briefing",
+                            status="skipped",
+                            start_time=start_time,
+                            end_time=end_time,
+                            duration=duration,
+                            result=message
+                        )
+                except:
+                    pass
+            else:
+                logger.warning(f"任务被跳过: {message}")
+
+            return result
         else:
             return result
 
